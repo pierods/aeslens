@@ -1,11 +1,14 @@
 package com.github.pierods.aeslens;
 
+import android.app.ProgressDialog;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.method.ScrollingMovementMethod;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.io.BufferedInputStream;
@@ -16,6 +19,7 @@ public class MainActivity extends AppCompatActivity {
 
     TextView decodedText;
     EditText urlText;
+    ProgressDialog progress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,11 +27,18 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         decodedText = (TextView) findViewById(R.id.decodedText);
+        decodedText.setMovementMethod(new ScrollingMovementMethod());
+
         urlText = (EditText) findViewById(R.id.urlEditText);
+        progress = new ProgressDialog(this);
 
         urlText.setOnKeyListener(new View.OnKeyListener() {
             public boolean onKey(View v, int keyCode, KeyEvent event) {
                 if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    progress.setMessage("Loading...");
+                    progress.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+                    progress.setIndeterminate(true);
+                    progress.show();
                     new RetrieveURLTask().execute(urlText.getText().toString());
                     return true;
                 }
@@ -37,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateContentView(final String txt) {
+        progress.dismiss();
         decodedText.setText(txt);
     }
 
