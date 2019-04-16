@@ -8,9 +8,14 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -44,19 +49,20 @@ public class MainActivity extends AppCompatActivity {
         private String retrieveURL(String urlText) {
 
             try {
-                StringBuilder sb = new StringBuilder();
                 URL url = new URL(urlText);
 
-                BufferedReader in;
-                in = new BufferedReader(new InputStreamReader(url.openStream()));
+                BufferedInputStream in;
+                in = new BufferedInputStream(url.openStream());
 
-                String inputLine;
-                while ((inputLine = in.readLine()) != null)
-                    sb.append(inputLine);
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] ba = new byte[1024];
 
+                while (in.read(ba) > 0) {
+                    out.write(ba);
+                }
                 in.close();
 
-                return sb.toString();
+                return new String(out.toByteArray());
 
             } catch (Exception e) {
                 return e.getLocalizedMessage();

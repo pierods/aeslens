@@ -19,8 +19,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ems="10"
-            android:inputType="textUri"
-            android:text="Name" />
+            android:hint="URL"
+            android:inputType="textUri" />
 
         <TextView
             android:id="@+id/decodedText"
