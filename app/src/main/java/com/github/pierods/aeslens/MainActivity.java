@@ -14,12 +14,16 @@ import android.widget.TextView;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
+import java.security.NoSuchAlgorithmException;
+
+import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 
 public class MainActivity extends AppCompatActivity {
 
-    TextView decodedText;
+    static TextView decodedText;
     EditText urlText;
-    ProgressDialog progress;
+    static ProgressDialog progress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,13 +51,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void updateContentView(final String txt) {
+    private static void updateContentView(final byte[] bytes) {
         progress.dismiss();
-        decodedText.setText(txt);
+        Decoder decoder = new Decoder();
+
+        String cleartext;
+
+        cleartext = decoder.decode(bytes);
+        decodedText.setText(cleartext);
     }
 
-    private class RetrieveURLTask extends AsyncTask<String, Void, String> {
-        private String retrieveURL(String urlText) {
+    private static class RetrieveURLTask extends AsyncTask<String, Void, byte[]> {
+        private byte[] retrieveURL(String urlText) {
 
             try {
                 URL url = new URL(urlText);
@@ -69,20 +78,38 @@ public class MainActivity extends AppCompatActivity {
                 }
                 in.close();
 
-                return new String(out.toByteArray());
+                return out.toByteArray();
 
             } catch (Exception e) {
-                return e.getLocalizedMessage();
+                return e.getLocalizedMessage().getBytes();
             }
         }
 
         @Override
-        protected String doInBackground(String... strings) {
+        protected byte[] doInBackground(String... strings) {
             return retrieveURL(strings[0]);
         }
 
-        protected void onPostExecute(final String result) {
+        protected void onPostExecute(final byte[] result) {
             updateContentView(result);
         }
+    }
+}
+
+class Decoder {
+    public String decode(byte[] encodedBytes) {
+        Cipher c;
+
+        try {
+            c = Cipher.getInstance("AES/GCM/NoPadding");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            e.printStackTrace();
+        }
+
+
+
+        return new String(encodedBytes);
     }
 }
