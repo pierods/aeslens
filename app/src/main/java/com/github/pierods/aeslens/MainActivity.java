@@ -2,7 +2,9 @@ package com.github.pierods.aeslens;
 
 import android.app.ProgressDialog;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.text.method.ScrollingMovementMethod;
 import android.view.KeyEvent;
@@ -14,10 +16,21 @@ import android.widget.TextView;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -51,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private static void updateContentView(final byte[] bytes) {
         progress.dismiss();
         Decoder decoder = new Decoder();
@@ -90,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
             return retrieveURL(strings[0]);
         }
 
+        @RequiresApi(api = Build.VERSION_CODES.KITKAT)
         protected void onPostExecute(final byte[] result) {
             updateContentView(result);
         }
@@ -97,19 +112,57 @@ public class MainActivity extends AppCompatActivity {
 }
 
 class Decoder {
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public String decode(byte[] encodedBytes) {
-        Cipher c;
+
+        String password = "abc123";
+        MessageDigest sha256;
+
+        try {
+            sha256 = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            return e.getLocalizedMessage();
+        }
+
+        byte[] hashedPassword = sha256.digest(password.getBytes(StandardCharsets.UTF_8));
+        ByteBuffer bb = ByteBuffer.wrap(encodedBytes);
+
+        byte[] nonce = new byte[12];
+        bb.get(nonce, 0, 12);
+        byte[] content = new byte[bb.remaining()];
+        bb.get(content);
+
+        Cipher c = null;
 
         try {
             c = Cipher.getInstance("AES/GCM/NoPadding");
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            return e.getLocalizedMessage();
         } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
+            return e.getLocalizedMessage();
+        }
+
+        SecretKey secretKey = new SecretKeySpec(hashedPassword, "AES");
+        GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(16, nonce);
+
+        try {
+            c.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
+        } catch (InvalidKeyException e) {
+            return e.getLocalizedMessage();
+        } catch (InvalidAlgorithmParameterException e) {
+            return e.getLocalizedMessage();
+        }
+
+        byte[] decodedData;
+        try {
+            decodedData = c.doFinal(content);
+        } catch (BadPaddingException e) {
+            return e.getLocalizedMessage();
+        } catch (IllegalBlockSizeException e) {
+            return e.getLocalizedMessage();
         }
 
 
-
-        return new String(encodedBytes);
+        return new String(decodedData);
     }
 }
