@@ -10,19 +10,16 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -87,8 +84,10 @@ public class MainActivity extends AppCompatActivity {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] ba = new byte[1024];
 
-                while (in.read(ba) > 0) {
-                    out.write(ba);
+                int bytesRead = in.read(ba);
+                while (bytesRead> 0) {
+                    out.write(ba, 0, bytesRead);
+                    bytesRead = in.read(ba);
                 }
                 in.close();
 
@@ -124,7 +123,7 @@ class Decoder {
             return e.getLocalizedMessage();
         }
 
-        byte[] hashedPassword = sha256.digest(password.getBytes(StandardCharsets.UTF_8));
+        byte[] hashedPassword = sha256.digest(password.getBytes());
         ByteBuffer bb = ByteBuffer.wrap(encodedBytes);
 
         byte[] nonce = new byte[12];
@@ -132,10 +131,10 @@ class Decoder {
         byte[] content = new byte[bb.remaining()];
         bb.get(content);
 
-        Cipher c = null;
+        Cipher cipher = null;
 
         try {
-            c = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher = Cipher.getInstance("AES/GCM/NoPadding");
         } catch (NoSuchAlgorithmException e) {
             return e.getLocalizedMessage();
         } catch (NoSuchPaddingException e) {
@@ -143,10 +142,10 @@ class Decoder {
         }
 
         SecretKey secretKey = new SecretKeySpec(hashedPassword, "AES");
-        GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(16, nonce);
+        GCMParameterSpec gcmParameterSpec = new GCMParameterSpec(128, nonce);
 
         try {
-            c.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmParameterSpec);
         } catch (InvalidKeyException e) {
             return e.getLocalizedMessage();
         } catch (InvalidAlgorithmParameterException e) {
@@ -155,7 +154,7 @@ class Decoder {
 
         byte[] decodedData;
         try {
-            decodedData = c.doFinal(content);
+            decodedData = cipher.doFinal(content);
         } catch (BadPaddingException e) {
             return e.getLocalizedMessage();
         } catch (IllegalBlockSizeException e) {
